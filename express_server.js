@@ -16,17 +16,31 @@ const {
   generateRandomString,
   getUserByEmail,
   urlsForUser,
+  isUser,
 } = require('./helper_functions/helpers');
 
 //------------------------------------------//
 app.use(bodyParser.urlencoded({
   extended: true,
 }));
+
 app.use(cookieSession({
   name: 'session',
   keys: ['blahblah'],
 }));
+
 app.use(methodOverride('_method'));
+
+app.use((req, __, next) => {
+  const userId = req.session.user_id;
+  
+  // if user_id in the cookie is not in the user database, clear their cookie
+  if (!isUser(userId, users)) {
+    req.session.user_id = null;
+  }
+
+  next();
+})
 
 app.set('view engine', 'ejs');
 
@@ -36,7 +50,7 @@ app.get('/urls', (req, res) => {
   const userId = req.session.user_id;
 
   if (!userId) {
-    return res.send('Please login!');
+    return res.redirect('/login');
   }
 
   const templateVars = {
@@ -49,9 +63,11 @@ app.get('/urls', (req, res) => {
 // shows create a new shortURL page
 app.get('/urls/new', (req, res) => {
   const userId = req.session.user_id;
+
   if (!userId) {
     return res.redirect('/login');
   }
+
   const templateVars = {
     user: users[userId],
   };
@@ -66,9 +82,11 @@ app.get('/urls/:shortURL', (req, res) => {
   if (!urlDatabase.hasOwnProperty(shortURL)) {
     return res.status(404).send('invalid shortURL!');
   }
+
   if (!userId) {
-    return res.status(401).send('Unauthorized access, please login');
+    return res.redirect('/login');
   }
+
   if (urlDatabase[shortURL].userId !== userId) {
     return res.status(401).send('Unauthorized access, you are not the creator of this shortURL');
   }
@@ -86,14 +104,13 @@ app.get('/urls/:shortURL', (req, res) => {
 
 // register form
 app.get('/register', (req, res) => {
-  const userId = req.session.user_id;
 
-  if (userId) {
+  if (req.session && req.session.user_id) {
     return res.redirect('/urls');
   }
 
   const templateVars = {
-    user: users[userId],
+    user: '',
     error: '',
   };
   return res.render('register', templateVars);
@@ -123,9 +140,11 @@ app.get('/u/:shortURL', (req, res) => {
   if (!shortURL) {
     return res.status(404).send('invalid shortURL');
   }
+
   if (!urlDatabase[shortURL].visitsUnique.includes(userId)) {
     urlDatabase[shortURL].visitsUnique.push(userId);
   }
+
   urlDatabase[shortURL].visitsTotal += 1;
   return res.redirect(longURL);
 });
@@ -137,33 +156,34 @@ app.get('/', (req, res) => {
   if (userId) {
     return res.redirect('/urls');
   }
+
   return res.redirect('/login');
 });
 
 // POST ROUTES------------------------------//
 // Register (set session cookie)
 app.post('/register', (req, res) => {
-  const userId = req.session.user_id;
   const id = generateRandomString();
   const { email, password } = req.body;
 
   if (!email || !password) {
     const templateVars = {
-      user: users[userId],
+      user: '',
       error: 'email or password was empty',
     };
     return res.render('register', templateVars);
   }
+
   if (getUserByEmail(users, email)) {
     const templateVars = {
-      user: users[userId],
+      user: '',
       error: 'email already registered',
     };
     return res.render('register', templateVars);
   }
 
   users[id] = {
-    id,
+    user_id: id,
     email,
     password: bcrypt.hashSync(password, 10),
   };
@@ -183,6 +203,7 @@ app.post('/login', (req, res) => {
       req.session.user_id = user.user_id;
       return res.redirect('/urls');
     }
+
     const templateVars = {
       user: users[userId],
       error: 'wrong password',
@@ -199,7 +220,7 @@ app.post('/login', (req, res) => {
 // Logout (clear session cookie)
 app.post('/logout', (req, res) => {
   req.session = null;
-  res.redirect('/urls');
+  res.redirect('/login');
 });
 
 // Create new shortURL
@@ -212,9 +233,11 @@ app.post('/urls', (req, res) => {
   if (longURL.slice(0, 7) !== 'http://') {
     return res.status(400).send('url must start with http://');
   }
+
   if (!userId) {
     return res.status(400).send('must be logged in to create shortURL');
   }
+
   urlDatabase[shortURL] = {
     longURL,
     userId,
@@ -234,10 +257,12 @@ app.delete('/urls/:shortURL', (req, res) => {
   if (!userId) {
     return res.status(400).send('must be logged in to delete shortURL');
   }
+
   if (usersURLs.hasOwnProperty(shortURL)) {
     delete urlDatabase[shortURL];
     return res.redirect('/urls');
   }
+
   return res.status(400).send('only the creators of the shortURL can delete it');
 });
 
@@ -250,9 +275,11 @@ app.put('/urls/:id', (req, res) => {
   if (!userId) {
     return res.status(400).send('must be logged in to edit shortURLS');
   }
+
   if (userId !== urlDatabase[shortURL].userId) {
     return res.status(400).send('must be creator of shortURL to edit');
   }
+
   urlDatabase[shortURL] = { ...urlDatabase[shortURL], longURL };
   return res.redirect('/urls');
 });

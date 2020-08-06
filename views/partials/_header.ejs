@@ -15,12 +15,8 @@
         <button>Log Out</button>
       </form>
       <% } else { %>
-        <form method="GET" action="/register">
-          <button>Register</button>
-        </form>
-        <form method="GET" action="/login">
-          <button>Login</button>
-        </form>
+        <a href="/register"><button>Register</button></a>  
+        <a href="/login"><button>Login</button></a>  
       <% } %>
     </div>
   </nav>

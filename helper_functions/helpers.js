@@ -1,3 +1,4 @@
+// generates a random string of 6 letters containing numbers and lower and capital letters
 const generateRandomString = () => {
   const urlLetters = [
     '1','2','3','4','5','6','7','8','9',
@@ -12,6 +13,7 @@ const generateRandomString = () => {
   return result.join('');
 };
 
+// returns the user object linked to the associated email
 const getUserByEmail = (usersObj, email) => {
   for (let user in usersObj) {
     if (usersObj[user].email === email) {
@@ -20,6 +22,7 @@ const getUserByEmail = (usersObj, email) => {
   }
 };
 
+// returns an array of urls created by a specific id
 const urlsForUser = (database, id) => {
   const filteredDatabase = {};
 
@@ -31,8 +34,19 @@ const urlsForUser = (database, id) => {
   return filteredDatabase;
 };
 
+// returns true if the user is in the database, false otherwise
+const isUser = (userId, userDatabase) => {
+  for (let user in userDatabase) {
+    if (userDatabase[user].user_id === userId) {
+      return true;
+    }
+  }
+  return false;
+}
+
 module.exports = {
   generateRandomString,
   getUserByEmail,
-  urlsForUser
+  urlsForUser,
+  isUser,
 };
