@@ -29,4 +29,4 @@ The edit page is pretty simple, it basically just shows all the information of t
 ## Getting Started
 
 - Install all dependencies (using the `npm install` command).
-- Run the development web server using the `node express_server.js` command.
+- Run the development web server using the `node express_server.js` command
